@@ -1,0 +1,26 @@
+﻿using Backend.DAO.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace Backend.DAO;
+
+public class DataContext(DbContextOptions<DataContext> options) : DbContext(options) 
+{
+    public DbSet<User> Users { get; set; }
+    public DbSet<Card> Cards { get; set; }
+    public DbSet<CardBase> CardBases { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<User>()
+            .HasMany(e => e.Cards)
+            .WithOne(e => e.Owner)
+            .HasForeignKey(e => e.OwnerId)
+            .IsRequired();
+
+        modelBuilder.Entity<CardBase>()
+            .HasMany(e => e.Cards)
+            .WithOne(e => e.BaseCard)
+            .HasForeignKey(e => e.CardBaseId)
+            .IsRequired();
+    }
+}
