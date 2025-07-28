@@ -5,6 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpClient<IMojangApiClient, MojangApiClient>();
 builder.Services.AddScoped<IMinecraftSkinService, MinecraftSkinService>();
+builder.Services.AddScoped<IYouTubeThumbnailService, YouTubeThumbnailService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

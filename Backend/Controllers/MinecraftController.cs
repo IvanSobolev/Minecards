@@ -6,10 +6,10 @@ namespace Backend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class CardCreatorController(IMinecraftSkinService skinService, ILogger<CardCreatorController> logger) : ControllerBase
+public class MinecraftController(IMinecraftSkinService skinService, ILogger<MinecraftController> logger) : ControllerBase
 {
     private readonly IMinecraftSkinService _skinService = skinService;
-    private readonly ILogger<CardCreatorController> _logger = logger;
+    private readonly ILogger<MinecraftController> _logger = logger;
     
     [HttpGet("skin/{username}")]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
