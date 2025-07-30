@@ -8,6 +8,7 @@ public class DataContext(DbContextOptions<DataContext> options) : DbContext(opti
     public DbSet<User> Users { get; set; }
     public DbSet<Card> Cards { get; set; }
     public DbSet<CardBase> CardBases { get; set; }
+    public DbSet<Pack> Packs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -21,6 +22,12 @@ public class DataContext(DbContextOptions<DataContext> options) : DbContext(opti
             .HasMany(e => e.Cards)
             .WithOne(e => e.BaseCard)
             .HasForeignKey(e => e.CardBaseId)
+            .IsRequired();
+        
+        modelBuilder.Entity<Pack>()
+            .HasMany(p => p.CardBases)
+            .WithOne(cb => cb.Pack)
+            .HasForeignKey(cb => cb.PackId)
             .IsRequired();
     }
 }
