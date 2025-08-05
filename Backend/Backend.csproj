@@ -27,8 +27,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="DAO\Repositories\Implementations\" />
-      <Folder Include="DAO\Repositories\Interfaces\" />
       <Folder Include="Migrations\" />
     </ItemGroup>
 

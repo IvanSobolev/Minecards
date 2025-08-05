@@ -1,10 +1,25 @@
-import { cardStore, subscribe } from '../store/cardStore';
+import { cardStore } from '../store/cardStore';
 import { fetchSkinByUsername } from '../api/minecraftApi';
 import { fetchThumbnailByUrl } from '../api/youtubeApi';
+import { createCardBase } from '../api/cardBasesApi'; 
 import { urlToFile } from '../services/fileConverter';
 
 const container = document.createElement('div');
+container.className = 'panel';
 container.innerHTML = `
+    <h2>Редактор карт</h2>
+    <div class="form-group">
+        <label for="card-name-input">Название карты</label>
+        <input type="text" id="card-name-input" placeholder="Имя ютубера или название">
+    </div>
+    <div class="form-group">
+        <label for="creator-input">Создатель (Creator)</label>
+        <input type="text" id="creator-input" placeholder="Ник создателя (необязательно)">
+    </div>
+    <div class="form-group">
+        <label for="pack-select">Пак</label>
+        <select id="pack-select" disabled><option>Загрузка...</option></select>
+    </div>
     <div class="form-group">
         <label for="rarity-select">Редкость карты</label>
         <select id="rarity-select">
@@ -14,22 +29,22 @@ container.innerHTML = `
     <div class="form-group">
         <label>Скин игрока</label>
         <div class="input-group">
-            <input type="text" id="nickname-input" placeholder="Введите ник Minecraft">
+            <input type="text" id="nickname-input" placeholder="Ник Minecraft">
             <button id="fetch-skin-btn">Найти</button>
         </div>
-        <div class="status-message" id="skin-status"></div>
         <input type="file" id="skin-file-input" accept="image/png">
+        <div class="status-message" id="skin-status"></div>
     </div>
     <div class="form-group">
         <label>Превью видео</label>
         <div class="input-group">
-            <input type="text" id="youtube-url-input" placeholder="Ссылка на YouTube видео">
+            <input type="text" id="youtube-url-input" placeholder="Ссылка на YouTube">
             <button id="fetch-thumbnail-btn">Найти</button>
         </div>
+        <input type="file" id="thumbnail-file-input" accept="image/*">
         <div class="status-message" id="thumbnail-status"></div>
-        <input type="file" id="thumbnail-file-input" accept="image/jpeg, image/png, image/webp">
     </div>
-    <button id="save-card-btn">Сохранить карту</button>
+    <button id="save-card-btn" disabled>Сохранить карту</button>
     <div class="status-message" id="save-status"></div>
 `;
 
@@ -39,15 +54,31 @@ function setStatus(element, message, type = 'info') {
 }
 
 export function EditorForm() {
+    const cardNameInput = container.querySelector('#card-name-input');
+    const creatorInput = container.querySelector('#creator-input');
+    const packSelect = container.querySelector('#pack-select');
     const raritySelect = container.querySelector('#rarity-select');
     const saveBtn = container.querySelector('#save-card-btn');
     
-    subscribe(() => {
-        saveBtn.disabled = !cardStore.skinFile || !cardStore.thumbnailFile;
+    cardStore.subscribe(() => {
+        const state = cardStore.getState();
+        saveBtn.disabled = !state.skinFile || !state.thumbnailFile || !state.selectedPackId;
+        if (packSelect.disabled && state.packs.length > 0) {
+            packSelect.innerHTML = '';
+            state.packs.forEach(pack => {
+                packSelect.innerHTML += `<option value="${pack.id}">${pack.name}</option>`;
+            });
+            packSelect.value = state.selectedPackId;
+            packSelect.disabled = false;
+        } else if (state.packs.length === 0) {
+            packSelect.innerHTML = '<option>Сначала создайте пак</option>';
+        }
     });
+    
     saveBtn.disabled = true;
 
-    raritySelect.addEventListener('change', () => cardStore.rarity = raritySelect.value);
+    packSelect.addEventListener('change', () => cardStore.setSelectedPackId(packSelect.value));
+    raritySelect.addEventListener('change', () => cardStore.setRarity(raritySelect.value));
     
     const skinStatus = container.querySelector('#skin-status');
     container.querySelector('#fetch-skin-btn').addEventListener('click', async () => {
@@ -57,14 +88,14 @@ export function EditorForm() {
         try {
             const url = await fetchSkinByUsername(nickname);
             const file = await urlToFile(url, `${nickname}.png`, 'image/png');
-            cardStore.skinFile = file; 
+            cardStore.setSkinFile(file);
             setStatus(skinStatus, 'Скин получен!', 'success');
         } catch (e) {
             setStatus(skinStatus, e.message, 'error');
         }
     });
     container.querySelector('#skin-file-input').addEventListener('change', (e) => {
-        if(e.target.files[0]) cardStore.skinFile = e.target.files[0]; // Простое присваивание!
+        if(e.target.files[0]) cardStore.setSkinFile(e.target.files[0]);
     });
 
     const thumbStatus = container.querySelector('#thumbnail-status');
@@ -75,29 +106,43 @@ export function EditorForm() {
         try {
             const thumbUrl = await fetchThumbnailByUrl(url);
             const file = await urlToFile(thumbUrl, 'thumbnail.jpg', 'image/jpeg');
-            cardStore.thumbnailFile = file; 
+            cardStore.setThumbnailFile(file);
             setStatus(thumbStatus, 'Превью получено!', 'success');
         } catch(e) {
             setStatus(thumbStatus, e.message, 'error');
         }
     });
+
     container.querySelector('#thumbnail-file-input').addEventListener('change', (e) => {
-        if(e.target.files[0]) cardStore.thumbnailFile = e.target.files[0]; // Простое присваивание!
+        if(e.target.files[0]) cardStore.setThumbnailFile(e.target.files[0]);
     });
 
     const saveStatus = container.querySelector('#save-status');
     saveBtn.addEventListener('click', async () => {
-        setStatus(saveStatus, 'Сохранение...', 'info');
-        const formData = new FormData();
-        formData.append('rarity', cardStore.rarity);
-        formData.append('skinFile', cardStore.skinFile);
-        formData.append('backgroundImageFile', cardStore.thumbnailFile);
+        const state = cardStore.getState();
+        const name = cardNameInput.value.trim();
+        const creator = creatorInput.value.trim();
 
-        console.log("Отправка данных на несуществующий API /api/cards:");
-        for(let [key, value] of formData.entries()) console.log(key, value);
+        if (!name || !state.selectedPackId || !state.skinFile || !state.thumbnailFile) {
+            return setStatus(saveStatus, 'Заполните все обязательные поля!', 'error');
+        }
+
+        setStatus(saveStatus, 'Сохранение...', 'info');
         
-        await new Promise(r => setTimeout(r, 1000));
-        setStatus(saveStatus, 'Карта успешно сохранена!', 'success');
+        const formData = new FormData();
+        formData.append('Name', name);
+        formData.append('Creator', creator);
+        formData.append('BaseRarityLevel', state.rarity);
+        formData.append('PackId', state.selectedPackId);
+        formData.append('SkinFile', state.skinFile);
+        formData.append('BackgroundImageFile', state.thumbnailFile);
+        
+        try {
+            await createCardBase(formData);
+            setStatus(saveStatus, 'Карта успешно создана!', 'success');
+        } catch (e) {
+            setStatus(saveStatus, e.message, 'error');
+        }
     });
 
     return container;

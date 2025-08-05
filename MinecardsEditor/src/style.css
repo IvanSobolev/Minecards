@@ -99,3 +99,17 @@ button.secondary:hover { background-color: #50555c; }
 }
 .status-message.error { color: var(--error-color); }
 .status-message.success { color: var(--success-color); }
+.navigation {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+.nav-btn {
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+}
+.nav-btn.active {
+    background-color: var(--primary-color);
+    box-shadow: 0 0 10px var(--primary-color);
+}

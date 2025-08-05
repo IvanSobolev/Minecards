@@ -7,15 +7,19 @@
     <title>Minecards - Редактор Карт</title>
   </head>
   <body>
-    <div id="app">
+     <div id="app">
       <header>
-        <h1>Minecards - Редактор карт</h1>
+        <h1>Minecards - Админ-панель</h1>
+        <nav class="navigation">
+          <button id="nav-editor-btn" class="nav-btn active">Редактор Карт</button>
+          <button id="nav-packs-btn" class="nav-btn">Управление Паками</button>
+        </nav>
       </header>
-      <main class="app-layout">
-        <div id="editor-container" class="panel"></div>
-        <div id="preview-container" class="panel"></div>
+      
+      <main id="main-content" class="app-layout">
       </main>
     </div>
+    
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

@@ -1,6 +1,6 @@
 import { Card } from 'minecards-renderer';
 import 'minecards-renderer/style.css';
-import { cardStore, subscribe } from '../store/cardStore'; 
+import { cardStore } from '../store/cardStore';
 
 const container = document.createElement('div');
 container.innerHTML = `
@@ -13,18 +13,51 @@ container.innerHTML = `
 const cardContainer = container.querySelector('#card-container');
 let cardInstance = null;
 
+let cachedSkinUrl = null;
+let cachedThumbnailUrl = null;
+let lastSkinFile = null;
+let lastThumbnailFile = null;
+let lastRarity = null;
+
 function updatePreview() {
+    const state = cardStore.getState();
+
+    let needsFullRecreation = false;
+
+    if (state.skinFile !== lastSkinFile) {
+        if (cachedSkinUrl) URL.revokeObjectURL(cachedSkinUrl); 
+        cachedSkinUrl = state.skinFile ? URL.createObjectURL(state.skinFile) : null;
+        lastSkinFile = state.skinFile;
+        needsFullRecreation = true;
+    }
+
+    if (state.thumbnailFile !== lastThumbnailFile) {
+        if (cachedThumbnailUrl) URL.revokeObjectURL(cachedThumbnailUrl);
+        cachedThumbnailUrl = state.thumbnailFile ? URL.createObjectURL(state.thumbnailFile) : null;
+        lastThumbnailFile = state.thumbnailFile;
+        needsFullRecreation = true;
+    }
+    
+    if (state.rarity !== lastRarity) {
+        lastRarity = state.rarity;
+        needsFullRecreation = true;
+    }
+
+    if (!needsFullRecreation && cardInstance) {
+        return;
+    }
+
     if (cardInstance) {
         cardInstance.destroy();
         cardInstance = null;
     }
     
-    if (cardStore.skinFile && cardStore.thumbnailFile) {
+    if (cachedSkinUrl && cachedThumbnailUrl) {
         const cardData = {
-            rarity: cardStore.rarity,
-            backgroundImage: URL.createObjectURL(cardStore.thumbnailFile),
-            skinImage: URL.createObjectURL(cardStore.skinFile),
-            packLogoImage: cardStore.packLogoUrl,
+            rarity: state.rarity,
+            backgroundImage: cachedThumbnailUrl,
+            skinImage: cachedSkinUrl,
+            packLogoImage: state.packLogoUrl,
         };
         cardInstance = new Card(cardContainer, cardData);
     } else {
@@ -33,7 +66,7 @@ function updatePreview() {
 }
 
 export function CardPreview() {
-    subscribe(updatePreview);
-    updatePreview();
+    cardStore.subscribe(updatePreview);
+    updatePreview(); 
     return container;
 }
